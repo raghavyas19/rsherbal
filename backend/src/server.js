@@ -32,10 +32,19 @@ app.use(passport.initialize());
 
 // Configure CORS more explicitly to support multiple allowed origins
 const defaultAllowedOrigins = ['https://www.rsherbal.shop', 'https://rsherbal.shop'];
-let allowedOrigins = defaultAllowedOrigins;
+let allowedOrigins = defaultAllowedOrigins.slice();
 if (CORS_ORIGIN) {
   // Allow providing a comma-separated list in env var
   allowedOrigins = CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean);
+} else if (NODE_ENV !== 'production') {
+  // In development, allow common localhost origins so the frontend can call the API
+  // without needing to set CORS_ORIGIN in every developer environment.
+  allowedOrigins = allowedOrigins.concat([
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ]);
 }
 
 const corsOptions = {
@@ -85,6 +94,15 @@ app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/admin', require('./routes/admin'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
+// Redirect legacy OAuth callback path to the API callback endpoint.
+// Some Google OAuth clients may be configured with `/auth/callback` (no `/api` or `/google`).
+// This preserves query params (like `code` and `state`) and forwards them to the passport handler.
+app.get('/auth/callback', (req, res) => {
+  const qs = require('querystring');
+  const query = qs.stringify(req.query || {});
+  return res.redirect(`/api/auth/google/callback${query ? `?${query}` : ''}`);
+});
 
 app.use('*', (req, res) => {
   res.status(404).json({ status: false, message: 'Endpoint Not Found' });

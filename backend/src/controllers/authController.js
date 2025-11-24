@@ -28,27 +28,36 @@ const googleCallback = (req, res, next) => {
       const token = signToken(user);
 
       const isProd = process.env.NODE_ENV === 'production';
-      // Set httpOnly token for requests
+      // Determine cookie options for production vs development
+      const cookieDomain = process.env.COOKIE_DOMAIN || undefined; // e.g. '.rsherbal.shop'
+      const secureFlag = Boolean(isProd);
+      // For cross-site setups (frontend on Vercel, backend on Render) we need SameSite=None and Secure=true in production
+      const sameSiteValue = isProd ? 'none' : 'lax';
+
+      // Set httpOnly token for requests (sensitive)
       res.cookie('token', token, {
         httpOnly: true,
-        secure: isProd,
-        sameSite: 'lax',
+        secure: secureFlag,
+        sameSite: sameSiteValue,
+        domain: cookieDomain,
         maxAge: 24 * 60 * 60 * 1000,
       });
 
-      // Set short-lived readable token for frontend to pick up once
+      // Set short-lived readable token for frontend to pick up once (non-httpOnly)
       res.cookie('auth_token', token, {
         httpOnly: false,
-        secure: isProd,
-        sameSite: 'lax',
+        secure: secureFlag,
+        sameSite: sameSiteValue,
+        domain: cookieDomain,
         maxAge: 60 * 1000, // 1 minute
       });
 
       // Set a flag cookie to indicate auth completed
       res.cookie('auth_completed', '1', {
         httpOnly: false,
-        secure: isProd,
-        sameSite: 'lax',
+        secure: secureFlag,
+        sameSite: sameSiteValue,
+        domain: cookieDomain,
         maxAge: 60 * 1000,
       });
 

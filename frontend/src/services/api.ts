@@ -1,9 +1,11 @@
 import axios from 'axios';
 
 // Normalize backend URL: allow port-only values like "5000" in env by coercing to http://localhost:5000
+// Production default: use the API subdomain so cookies set for `.rsherbal.shop` are sent correctly.
 const rawBackend = import.meta.env.VITE_BACKEND_URL || '';
+const isProd = import.meta.env.MODE === 'production';
 let backendBase = rawBackend;
-if (!backendBase) backendBase = 'http://localhost:5000';
+if (!backendBase) backendBase = isProd ? 'https://api.rsherbal.shop' : 'http://localhost:5000';
 // If someone mistakenly set just a port number like '5000' or ':5000', fix it
 if (/^:\d+$/.test(backendBase) || /^\d+$/.test(backendBase)) {
   backendBase = `http://localhost:${backendBase.replace(/^:/, '')}`;
